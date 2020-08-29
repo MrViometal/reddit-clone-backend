@@ -78,6 +78,9 @@ let UserResolver = class UserResolver {
             return user;
         });
     }
+    getUsers({ em }) {
+        return em.find(User_1.User, {});
+    }
     register(options, { em }) {
         return __awaiter(this, void 0, void 0, function* () {
             if (options.username.length <= 2) {
@@ -159,6 +162,13 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], UserResolver.prototype, "me", null);
+__decorate([
+    type_graphql_1.Query(() => [User_1.User]),
+    __param(0, type_graphql_1.Ctx()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], UserResolver.prototype, "getUsers", null);
 __decorate([
     type_graphql_1.Mutation(() => UserResponse),
     __param(0, type_graphql_1.Arg('options')),

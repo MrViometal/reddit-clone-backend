@@ -50,6 +50,16 @@ export class UserResolver {
     const user = await em.findOne(User, { id });
     return user;
   }
+
+  //get users
+
+  @Query(() => [User])
+  getUsers(@Ctx() { em }: MyContext): Promise<User[]> {
+    //not logged in
+
+    return em.find(User, {});
+  }
+
   //register a user
   @Mutation(() => UserResponse)
   async register(
