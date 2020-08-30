@@ -81,7 +81,7 @@ let UserResolver = class UserResolver {
     getUsers({ em }) {
         return em.find(User_1.User, {});
     }
-    register(options, { em }) {
+    register(options, { em, req }) {
         return __awaiter(this, void 0, void 0, function* () {
             if (options.username.length <= 2) {
                 return {
@@ -130,6 +130,7 @@ let UserResolver = class UserResolver {
                     };
                 }
             }
+            req.session.userId = user.id;
             return {
                 user: Object.assign(Object.assign({}, user), { createdAt: user.created_at, updatedAt: user.updated_at }),
             };
