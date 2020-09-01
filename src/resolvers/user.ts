@@ -6,7 +6,6 @@ import {
   Ctx,
   ObjectType,
   Query,
-  Args,
 } from 'type-graphql';
 import { MyContext } from 'src/types';
 import { User } from '../entities/User';
