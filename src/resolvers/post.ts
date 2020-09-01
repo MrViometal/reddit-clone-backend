@@ -21,6 +21,7 @@ export class PostResolver {
 
   @Mutation(() => Post) //POST one, query returns a post
   //post arguments: title (string), and context type, and return a promise with a post
+  @UseMiddleware(isAuth)
   async createPost(
     @Arg('title') title: string,
     @Ctx() { em }: MyContext,
