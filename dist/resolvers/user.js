@@ -25,14 +25,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UserResolver = void 0;
-const type_graphql_1 = require("type-graphql");
-const User_1 = require("../entities/User");
 const argon2_1 = __importDefault(require("argon2"));
+const type_graphql_1 = require("type-graphql");
+const typeorm_1 = require("typeorm");
+const uuid_1 = require("uuid");
 const constants_1 = require("../constants");
+const User_1 = require("../entities/User");
+const sendEmail_1 = require("../utils/sendEmail");
 const validateRegister_1 = require("../utils/validateRegister");
 const UsernamePasswordInput_1 = require("./UsernamePasswordInput");
-const sendEmail_1 = require("../utils/sendEmail");
-const uuid_1 = require("uuid");
 let FieldError = class FieldError {
 };
 __decorate([
@@ -60,39 +61,38 @@ UserResponse = __decorate([
     type_graphql_1.ObjectType()
 ], UserResponse);
 let UserResolver = class UserResolver {
-    me({ req, em }) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const id = req.session.userId;
-            if (!id) {
-                return null;
-            }
-            const user = yield em.findOne(User_1.User, { id });
-            return user;
-        });
+    me({ req }) {
+        const id = req.session.userId;
+        if (!id) {
+            return null;
+        }
+        return User_1.User.findOne(id);
     }
-    getUsers({ em }) {
-        return em.find(User_1.User, {});
+    getUsers() {
+        return User_1.User.find();
     }
-    register(options, { em, req }) {
+    register(options, { req }) {
         return __awaiter(this, void 0, void 0, function* () {
+            console.log({ options });
             const errors = validateRegister_1.validateRegister(options);
             if (errors)
                 return { errors };
             const hashedPassword = yield argon2_1.default.hash(options.password);
             let user;
             try {
-                const result = yield em
-                    .createQueryBuilder(User_1.User)
-                    .getKnexQuery()
-                    .insert({
+                const result = yield typeorm_1.getConnection()
+                    .createQueryBuilder()
+                    .insert()
+                    .into(User_1.User)
+                    .values({
                     username: options.username,
                     email: options.email,
                     password: hashedPassword,
-                    created_at: new Date(),
-                    updated_at: new Date(),
                 })
-                    .returning('*');
-                user = result[0];
+                    .returning('*')
+                    .execute();
+                console.log({ result });
+                user = result.raw[0];
             }
             catch (err) {
                 if (err.code === '23505') {
@@ -107,16 +107,14 @@ let UserResolver = class UserResolver {
                 }
             }
             req.session.userId = user.id;
-            return {
-                user: Object.assign(Object.assign({}, user), { createdAt: user.created_at, updatedAt: user.updated_at }),
-            };
+            return { user };
         });
     }
-    login(usernameOrEmail, password, { em, req }) {
+    login(usernameOrEmail, password, { req }) {
         return __awaiter(this, void 0, void 0, function* () {
-            const user = yield em.findOne(User_1.User, usernameOrEmail.includes('@')
-                ? { email: usernameOrEmail }
-                : { username: usernameOrEmail });
+            const user = yield User_1.User.findOne(usernameOrEmail.includes('@')
+                ? { where: { email: usernameOrEmail } }
+                : { where: { username: usernameOrEmail } });
             if (!user) {
                 return {
                     errors: [
@@ -155,9 +153,9 @@ let UserResolver = class UserResolver {
             });
         });
     }
-    forgotPassword(email, { em, redis }) {
+    forgotPassword(email, { redis }) {
         return __awaiter(this, void 0, void 0, function* () {
-            const user = yield em.findOne(User_1.User, { email });
+            const user = yield User_1.User.findOne({ where: { email } });
             if (!user) {
                 return true;
             }
@@ -168,7 +166,7 @@ let UserResolver = class UserResolver {
             return true;
         });
     }
-    changePassword(token, newPassword, { redis, em, req }) {
+    changePassword(token, newPassword, { redis, req }) {
         return __awaiter(this, void 0, void 0, function* () {
             if (newPassword.length <= 3) {
                 return {
@@ -192,7 +190,8 @@ let UserResolver = class UserResolver {
                     ],
                 };
             }
-            const user = yield em.findOne(User_1.User, { id: parseInt(userId) });
+            const userIdNum = parseInt(userId);
+            const user = yield User_1.User.findOne(userIdNum);
             if (!user) {
                 return {
                     errors: [
@@ -203,8 +202,7 @@ let UserResolver = class UserResolver {
                     ],
                 };
             }
-            user.password = yield argon2_1.default.hash(newPassword);
-            yield em.persistAndFlush(user);
+            yield User_1.User.update({ id: userIdNum }, { password: yield argon2_1.default.hash(newPassword) });
             yield redis.del(redisKey);
             req.session.userId = user.id;
             return { user };
@@ -216,13 +214,12 @@ __decorate([
     __param(0, type_graphql_1.Ctx()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", Promise)
+    __metadata("design:returntype", void 0)
 ], UserResolver.prototype, "me", null);
 __decorate([
     type_graphql_1.Query(() => [User_1.User]),
-    __param(0, type_graphql_1.Ctx()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], UserResolver.prototype, "getUsers", null);
 __decorate([
