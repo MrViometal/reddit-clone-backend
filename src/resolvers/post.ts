@@ -7,10 +7,12 @@ import {
   Field,
   Ctx,
   UseMiddleware,
+  Int,
 } from 'type-graphql';
 import { Post } from '../entities/Post';
 import { MyContext } from '../types';
 import { isAuth } from '../middleware/isAuth';
+import { getConnection } from 'typeorm';
 
 @InputType()
 class PostInput {
@@ -21,25 +23,36 @@ class PostInput {
   text: string;
 }
 
-//graphql resolver
 @Resolver()
-
-//class definition
 export class PostResolver {
-  @Query(() => [Post]) //GET all, query returns all posts
-  //posts context type, and returns a promise with an array of posts
-  posts(): Promise<Post[]> {
-    return Post.find(); //find posts with the arguments empty object
+  //GET all, query returns all posts
+  @Query(() => [Post])
+  posts(
+    @Arg('limit', () => Int) limit: number,
+    @Arg('cursor', () => String, { nullable: true }) cursor: string | null,
+  ): Promise<Post[]> {
+    const realLimit = Math.min(50, limit);
+    // return Post.find();
+    const qb = getConnection()
+      .getRepository(Post)
+      .createQueryBuilder('p')
+      .orderBy('"createdAt"', 'DESC')
+      .take(realLimit);
+
+    if (cursor) {
+      qb.where('"createdAt"<:cursor', { cursor: new Date(parseInt(cursor)) });
+    }
+    return qb.getMany();
   }
 
-  @Query(() => Post, { nullable: true }) //GET one, query returns a post, and can return null
-  //post arguments: id (number), and context type, and return a promise with a post or null
+  //GET one, query returns a post or null
+  @Query(() => Post, { nullable: true })
   post(@Arg('id') id: number): Promise<Post | undefined> {
-    return Post.findOne(id); //find one post with this id
+    return Post.findOne(id);
   }
 
-  @Mutation(() => Post) //POST one, query returns a post
-  //post arguments: title (string), and context type, and return a promise with a post
+  //POST(create) one, query returns a post
+  @Mutation(() => Post)
   @UseMiddleware(isAuth)
   async createPost(
     @Ctx() { req }: MyContext,
@@ -51,25 +64,20 @@ export class PostResolver {
     }).save();
   }
 
-  @Mutation(() => Post, { nullable: true }) //Update one, query returns a post or null
-  //post arguments: ir (number) & title (string), and context type, and return a promise with a post or null
+  //UPDATE one, query returns a post or null
+  @Mutation(() => Post, { nullable: true })
   async updatePost(
     @Arg('id') id: number,
     @Arg('title', () => String, { nullable: true }) title: string,
   ): Promise<Post | null> {
-    const post = await Post.findOne(id); //find post
-    if (!post) {
-      return null; //if there is no post return null
-    }
-    if (typeof title !== 'undefined') {
-      //if there is a title
-      await Post.update({ id }, { title });
-    }
+    const post = await Post.findOne(id);
+    if (!post) return null;
+    if (typeof title !== 'undefined') await Post.update({ id }, { title });
     return post;
   }
 
-  @Mutation(() => Boolean) //delete one, query returns boolean
-  //post arguments: id (number), and context type, and return a promise with a post
+  //DELETE one, query returns boolean
+  @Mutation(() => Boolean)
   async deletePost(@Arg('id') id: number): Promise<boolean> {
     Post.delete(id);
     return true;
