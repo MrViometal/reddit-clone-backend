@@ -8,6 +8,8 @@ import {
   ObjectType,
   Query,
   Resolver,
+  FieldResolver,
+  Root,
 } from 'type-graphql';
 import { getConnection } from 'typeorm';
 import { v4 } from 'uuid';
@@ -38,8 +40,16 @@ class UserResponse {
   user?: User;
 }
 
-@Resolver()
+@Resolver(User)
 export class UserResolver {
+  @FieldResolver(() => String)
+  email(@Root() user: User, @Ctx() { req }: MyContext) {
+    if (req.session.userId === user.id) {
+      return user.email;
+    }
+    return '';
+  }
+
   //me User
   @Query(() => User, { nullable: true })
   me(@Ctx() { req }: MyContext) {
