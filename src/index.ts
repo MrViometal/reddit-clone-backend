@@ -7,7 +7,7 @@ import Redis from 'ioredis';
 import 'reflect-metadata';
 import { buildSchema } from 'type-graphql';
 import { createConnection } from 'typeorm';
-import { COOKIE_NAME, __prod__ } from './constants';
+import { COOKIE_NAME, __prod__, DEV_PORT } from './constants';
 import { Post } from './entities/Post';
 import { User } from './entities/User';
 import { HelloResolver } from './resolvers/hello';
@@ -75,8 +75,8 @@ const main = async () => {
     cors: false,
   });
 
-  app.listen(4000, () => {
-    console.log('server started on Local host:4000');
+  app.listen(DEV_PORT, () => {
+    console.log(`server started on Localhost:${DEV_PORT}`);
   });
 };
 

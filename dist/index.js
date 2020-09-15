@@ -74,8 +74,8 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
         app,
         cors: false,
     });
-    app.listen(4000, () => {
-        console.log('server started on Local host:4000');
+    app.listen(constants_1.DEV_PORT, () => {
+        console.log(`server started on Localhost:${constants_1.DEV_PORT}`);
     });
 });
 main();
