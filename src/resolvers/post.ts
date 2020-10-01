@@ -16,7 +16,6 @@ import { Post } from '../entities/Post';
 import { MyContext } from '../types';
 import { isAuth } from '../middleware/isAuth';
 import { getConnection } from 'typeorm';
-import { Vote } from '../entities/Vote';
 
 @InputType()
 class PostInput {
