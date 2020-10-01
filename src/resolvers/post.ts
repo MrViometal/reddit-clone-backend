@@ -16,6 +16,7 @@ import { Post } from '../entities/Post';
 import { MyContext } from '../types';
 import { isAuth } from '../middleware/isAuth';
 import { getConnection } from 'typeorm';
+import { Vote } from '../entities/Vote';
 
 @InputType()
 class PostInput {
@@ -146,25 +147,58 @@ export class PostResolver {
     const isUpVote = value > 0;
     const realValue = isUpVote ? 1 : -1;
     const { userId } = req.session;
-    // await Vote.insert({
-    //   userId,
-    //   postId,
-    //   value: realValue,
-    // });
-    await getConnection().query(
-      `
-    START TRANSACTION;
 
-    insert into vote ("userId", "postId", value)
-    values(${userId},${postId},${realValue});
+    const vote = await Vote.findOne({ where: { postId, userId } });
 
-    update post 
-    set points = points + ${realValue}
-    where id = ${postId};
+    if (vote && vote.value !== realValue) {
+      //was up vote but want to down vote or vice versa
+      await getConnection().transaction(async tm => {
+        // update the already posted vote
+        await tm.query(
+          `
+          update vote 
+          set vote=$1
+          where "postId"=$2, "userId"=$3
+        `,
+          [realValue, postId, userId],
+        );
 
-    COMMIT;
-    `,
-    );
+        //change vote value on post by multiplying the real value to negate the previous vote effect
+        await tm.query(
+          `
+          update post   
+          set points = points + $1
+          where id = $2
+        `,
+          [2 * realValue, postId],
+        );
+      });
+    } else if (!vote) {
+      //no vote yet
+      await getConnection().transaction(async tm => {
+        // insert a vote
+        await tm.query(
+          `
+          insert into vote ("userId", "postId", value)
+          values ($1,$2,$3)
+        `,
+          [userId, postId, realValue],
+        );
+
+        //change vote value on post
+        await tm.query(
+          `
+          update post   
+          set points = points + $1
+          where id = $2
+        `,
+          [realValue, postId],
+        );
+      });
+    } else {
+      //user is being dumb on purpose
+      //do nothing
+    }
 
     return true;
   }
