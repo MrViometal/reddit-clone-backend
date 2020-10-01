@@ -26,6 +26,7 @@ const type_graphql_1 = require("type-graphql");
 const Post_1 = require("../entities/Post");
 const isAuth_1 = require("../middleware/isAuth");
 const typeorm_1 = require("typeorm");
+const vote_1 = require("../entities/vote");
 let PostInput = class PostInput {
 };
 __decorate([
@@ -108,6 +109,24 @@ let PostResolver = class PostResolver {
     textSnippet(root) {
         return root.text.slice(0, 50);
     }
+    vote(postId, value, { req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const isUpVote = value > 0;
+            const realValue = isUpVote ? 1 : -1;
+            const { userId } = req.session;
+            yield vote_1.Vote.insert({
+                userId,
+                postId,
+                value: realValue,
+            });
+            yield typeorm_1.getConnection().query(`
+    update post 
+    set points = points + $1
+    where id = $2
+    `, [realValue, postId]);
+            return true;
+        });
+    }
 };
 __decorate([
     type_graphql_1.Query(() => PaginatedPosts),
@@ -155,6 +174,16 @@ __decorate([
     __metadata("design:paramtypes", [Post_1.Post]),
     __metadata("design:returntype", void 0)
 ], PostResolver.prototype, "textSnippet", null);
+__decorate([
+    type_graphql_1.Mutation(() => Boolean),
+    type_graphql_1.UseMiddleware(isAuth_1.isAuth),
+    __param(0, type_graphql_1.Arg('postId', () => type_graphql_1.Int)),
+    __param(1, type_graphql_1.Arg('value', () => type_graphql_1.Int)),
+    __param(2, type_graphql_1.Ctx()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, Number, Object]),
+    __metadata("design:returntype", Promise)
+], PostResolver.prototype, "vote", null);
 PostResolver = __decorate([
     type_graphql_1.Resolver(Post_1.Post)
 ], PostResolver);

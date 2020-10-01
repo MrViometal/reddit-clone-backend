@@ -16,6 +16,7 @@ import { Post } from '../entities/Post';
 import { MyContext } from '../types';
 import { isAuth } from '../middleware/isAuth';
 import { getConnection } from 'typeorm';
+import { Vote } from '../entities/vote';
 
 @InputType()
 class PostInput {
@@ -132,5 +133,34 @@ export class PostResolver {
   @FieldResolver(() => String)
   textSnippet(@Root() root: Post) {
     return root.text.slice(0, 50);
+  }
+
+  //Up or Down vote a post
+  @Mutation(() => Boolean)
+  @UseMiddleware(isAuth)
+  async vote(
+    @Arg('postId', () => Int) postId: number,
+    @Arg('value', () => Int) value: number,
+    @Ctx() { req }: MyContext,
+  ) {
+    //need to handle case of vote 0
+    const isUpVote = value > 0;
+    const realValue = isUpVote ? 1 : -1;
+    const { userId } = req.session;
+    await Vote.insert({
+      userId,
+      postId,
+      value: realValue,
+    });
+    await getConnection().query(
+      `
+    update post 
+    set points = points + $1
+    where id = $2
+    `,
+      [realValue, postId],
+    );
+
+    return true;
   }
 }
