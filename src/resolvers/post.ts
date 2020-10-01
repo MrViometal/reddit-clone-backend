@@ -16,7 +16,7 @@ import { Post } from '../entities/Post';
 import { MyContext } from '../types';
 import { isAuth } from '../middleware/isAuth';
 import { getConnection } from 'typeorm';
-import { Vote } from '../entities/vote';
+import { Vote } from '../entities/Vote';
 
 @InputType()
 class PostInput {
@@ -147,18 +147,24 @@ export class PostResolver {
     const isUpVote = value > 0;
     const realValue = isUpVote ? 1 : -1;
     const { userId } = req.session;
-    await Vote.insert({
-      userId,
-      postId,
-      value: realValue,
-    });
+    // await Vote.insert({
+    //   userId,
+    //   postId,
+    //   value: realValue,
+    // });
     await getConnection().query(
       `
+    START TRANSACTION;
+
+    insert into vote ("userId", "postId", value)
+    values(${userId},${postId},${realValue});
+
     update post 
-    set points = points + $1
-    where id = $2
+    set points = points + ${realValue}
+    where id = ${postId};
+
+    COMMIT;
     `,
-      [realValue, postId],
     );
 
     return true;

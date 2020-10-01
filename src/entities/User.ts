@@ -9,7 +9,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { Post } from './Post';
-import { Vote } from './vote';
+import { Vote } from './Vote';
 
 @ObjectType()
 @Entity()

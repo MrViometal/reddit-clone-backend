@@ -14,7 +14,7 @@ import { HelloResolver } from './resolvers/hello';
 import { PostResolver } from './resolvers/post';
 import { UserResolver } from './resolvers/user';
 import path from 'path';
-import { Vote } from './entities/vote';
+import { Vote } from './entities/Vote';
 
 const main = async () => {
   const conn = createConnection({

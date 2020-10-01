@@ -9,7 +9,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Vote } from './vote';
+import { Vote } from './Vote';
 import { User } from './User';
 
 @ObjectType()
