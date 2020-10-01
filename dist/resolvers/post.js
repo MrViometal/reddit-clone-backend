@@ -54,11 +54,11 @@ PaginatedPosts = __decorate([
     type_graphql_1.ObjectType()
 ], PaginatedPosts);
 let PostResolver = class PostResolver {
-    posts(limit, cursor) {
+    posts(limit, cursor, { req }) {
         return __awaiter(this, void 0, void 0, function* () {
             const realLimit = Math.min(50, limit);
             const realLimitPlusOne = realLimit + 1;
-            const replacements = [realLimitPlusOne];
+            const replacements = [realLimitPlusOne, req.session.userId];
             if (cursor)
                 replacements.push(new Date(parseInt(cursor)));
             const posts = yield typeorm_1.getConnection().query(`
@@ -69,10 +69,15 @@ let PostResolver = class PostResolver {
         'email', u.email,
         'createdAt', u."createdAt",
         'createdAt', u."createdAt"
-        ) creator
+        ) creator,
+
+     ${req.session.userId
+                ? `(select value from vote where "userId" = $2 and "postId" = p.id) "voteStatus"`
+                : `null as "voteStatus"`}
+     
       from post p
       inner join public.user u on u.id = p."creatorId"
-      ${cursor ? `where p."createdAt"< $2` : ''}
+      ${cursor ? `where p."createdAt"< $3` : ''}
       order by p."createdAt" DESC
       limit $1
     `, replacements);
@@ -119,8 +124,8 @@ let PostResolver = class PostResolver {
                 yield typeorm_1.getConnection().transaction((tm) => __awaiter(this, void 0, void 0, function* () {
                     yield tm.query(`
           update vote 
-          set vote=$1
-          where "postId"=$2, "userId"=$3
+          set value = $1
+          where "postId" = $2 and "userId" = $3
         `, [realValue, postId, userId]);
                     yield tm.query(`
           update post   
@@ -152,8 +157,9 @@ __decorate([
     type_graphql_1.Query(() => PaginatedPosts),
     __param(0, type_graphql_1.Arg('limit', () => type_graphql_1.Int)),
     __param(1, type_graphql_1.Arg('cursor', () => String, { nullable: true })),
+    __param(2, type_graphql_1.Ctx()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, Object]),
+    __metadata("design:paramtypes", [Number, Object, Object]),
     __metadata("design:returntype", Promise)
 ], PostResolver.prototype, "posts", null);
 __decorate([
