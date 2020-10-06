@@ -107,8 +107,8 @@ export class PostResolver {
 
   //GET one, query returns a post or null
   @Query(() => Post, { nullable: true })
-  post(@Arg('id') id: number): Promise<Post | undefined> {
-    return Post.findOne(id);
+  post(@Arg('id', () => Int) id: number): Promise<Post | undefined> {
+    return Post.findOne(id, { relations: ['creator'] });
   }
 
   //POST(create) one, query returns a post
