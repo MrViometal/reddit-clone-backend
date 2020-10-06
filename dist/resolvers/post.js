@@ -112,14 +112,7 @@ let PostResolver = class PostResolver {
     }
     deletePost(id, { req }) {
         return __awaiter(this, void 0, void 0, function* () {
-            const post = yield Post_1.Post.findOne(id);
-            if (!post)
-                return false;
-            if (post.creatorId !== req.session.userId) {
-                throw new Error('not authorized');
-            }
-            yield Vote_1.Vote.delete({ postId: id });
-            yield Post_1.Post.delete({ id });
+            yield Post_1.Post.delete({ id, creatorId: req.session.userId });
             return true;
         });
     }
