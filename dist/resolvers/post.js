@@ -27,6 +27,7 @@ const Post_1 = require("../entities/Post");
 const isAuth_1 = require("../middleware/isAuth");
 const typeorm_1 = require("typeorm");
 const Vote_1 = require("../entities/Vote");
+const User_1 = require("../entities/User");
 let PostInput = class PostInput {
 };
 __decorate([
@@ -68,20 +69,12 @@ let PostResolver = class PostResolver {
             }
             const posts = yield typeorm_1.getConnection().query(`
       select p.*, 
-      json_build_object(
-        'id', u.id,
-        'username', u.username,
-        'email', u.email,
-        'createdAt', u."createdAt",
-        'createdAt', u."createdAt"
-        ) creator,
-
+   
      ${req.session.userId
                 ? `(select value from vote where "userId" = $2 and "postId" = p.id) "voteStatus"`
                 : `null as "voteStatus"`}
      
       from post p
-      inner join public.user u on u.id = p."creatorId"
       ${cursor ? `where p."createdAt"< ${cursorIdx}` : ''}
       order by p."createdAt" DESC
       limit $1
@@ -93,7 +86,7 @@ let PostResolver = class PostResolver {
         });
     }
     post(id) {
-        return Post_1.Post.findOne(id, { relations: ['creator'] });
+        return Post_1.Post.findOne(id);
     }
     createPost({ req }, input) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -121,8 +114,11 @@ let PostResolver = class PostResolver {
             return true;
         });
     }
-    textSnippet(root) {
-        return root.text.slice(0, 50);
+    textSnippet(post) {
+        return post.text.slice(0, 50);
+    }
+    creator(post, { userLoader }) {
+        return userLoader.load(post.creatorId);
     }
     vote(postId, value, { req }) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -215,6 +211,13 @@ __decorate([
     __metadata("design:paramtypes", [Post_1.Post]),
     __metadata("design:returntype", void 0)
 ], PostResolver.prototype, "textSnippet", null);
+__decorate([
+    type_graphql_1.FieldResolver(() => User_1.User),
+    __param(0, type_graphql_1.Root()), __param(1, type_graphql_1.Ctx()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Post_1.Post, Object]),
+    __metadata("design:returntype", void 0)
+], PostResolver.prototype, "creator", null);
 __decorate([
     type_graphql_1.Mutation(() => Boolean),
     type_graphql_1.UseMiddleware(isAuth_1.isAuth),
