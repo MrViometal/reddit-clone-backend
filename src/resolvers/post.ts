@@ -170,8 +170,9 @@ export class PostResolver {
 
   //Text snippet
   @FieldResolver(() => String)
-  textSnippet(@Root() root: Post) {
-    return root.text.slice(0, 50);
+  textSnippet(@Root() post: Post) {
+    return post.text.slice(0, 50);
+  }
   }
 
   //Up or Down vote a post
